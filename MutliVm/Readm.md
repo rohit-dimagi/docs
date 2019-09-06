@@ -24,7 +24,7 @@ In this doc you'll see an Basic overview of different Component interaction and 
 ##### A Basic Architecture will look like this.
   
   
-![Architecture](https://github.com/rohit-dimagi/docs/edit/master/MutliVm/img/arch.jpg)
+![Architecture](img/arch.jpg)
 
 
   ##### A Brief overview of the systems involved in above and their role in supporting the commcarehq.
