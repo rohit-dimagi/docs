@@ -20,6 +20,7 @@
 
 
 In this doc you'll see an Basic overview of different Component interaction and what their purpose is in commcareHQ.
+
 <sub><sup>Notes:- Application ports  mentioned in the Architecture is configurable. The servers mentioned inside the box is just for  simplify the illustration.For example a thick black box and a thick Black arrow pointing to postgresql means all the services inside the thick Black box will be connecting to postgresql. </sup></sub>
 
 ##### A Basic Architecture will look like this.
@@ -51,16 +52,48 @@ Commcare Processes
   
  **Nginx:-** Entry point for the stack involved in the commcarehq , This will act as a load balancer/reverse proxy and forward the user request to the webworkers.
  
+ ![Nginx](img/nginx.jpg)
+ 
+ ```
+ upstream commcarehq {
+    least_conn;
+    server 192.168.33.16:8000;
+    server 192.168.33.17:8000;
+    server 192.168.33.18:8000;
+}
+server {
+    listen 80;
+    server_name localhost;
+    root /var/www/html;
+    location /static/ {
+        alias /home/cchq/src/cchq/staticfiles/;
+    }
+    location / {
+        proxy_pass http://commcarehq;
+    }
+}
+ ```
   **Django Webworker:-** This is where the python code runs and interact with different subsystem depending on the user requests. It handles almost all the logic of commcarehq
  
  **Pillow:-** it Takes changes to primary data(couchdDB) and updates secondary data sources(Postgresql,Elasticsearch).Pillow detects changes in couchdb with change_feed feature available in couchdb. it pushes the changes in kafka topics, from there some other pilow service read the changes and applies necessaries changes to postgresql or elasticsearch.
 
 **Celery:**- This machines runs the celery process. [Celery](http://www.celeryproject.org/) consumes from rabbitmq queue and process them. Anything which usually takes time like sending an email/sms would be run through celery systems.
 
-######Notes:-
+Notes:-
 Django Webworker,Celery and Pillowtop has same codebase [commcarehq](https://github.com/dimagi/commcare-hq/). They just run different piece of code depending on which server they are running on.The Confiuration file for these and usage is [here](https://github.com/dimagi/commcare-hq/blob/master/localsettings.example.py).
 
  **Redis:-** Used for caching the frequent needed information to reduce round-trips and increase the response time. It is also used for locking and User sessions.
+ ![Nginx](img/Redis.jpg)
+
+
+ 
+ ```
+ In localsettings.py update the following settings.
+ redis_cache = {
+    'BACKEND': 'django_redis.cache.RedisCache',
+    'LOCATION': 'redis://machine_ip:6379/0',
+}
+ ```
 
 **Formplayer:-** Formplayer is a Java service that allows us to use applications on the web instead of on a 
 mobile device. Formplayer cache session instance in redis and stores session instances via Postgres. For more information on building and running it . see it here [Formplayer](https://github.com/dimagi/formplayer)
