@@ -19,7 +19,8 @@
 -   Asynchronous processors pick up events from Kafka handle ETL into ElasticSearch, Postgres report tables, and any other events.
 
 
-In this doc you'll see an Basic overview of different Component interaction and what their purpose is in commcareHQ
+In this doc you'll see an Basic overview of different Component interaction and what their purpose is in commcareHQ.
+<sub><sup>Notes:- Application ports  mentioned in the Architecture is configurable. The servers mentioned inside the box is just for  simplify the illustration.For example a thick black box and a thick Black arrow pointing to postgresql means all the services inside the thick Black box will be connecting to postgresql. </sup></sub>
 
 ##### A Basic Architecture will look like this.
   
@@ -47,10 +48,18 @@ Commcare Processes
   * RabbitMQ
   * Shared Directory
   
+  
  **Nginx:-** Entry point for the stack involved in the commcarehq , This will act as a load balancer/reverse proxy and forward the user request to the webworkers.
  
   **Django Webworker:-** This is where the python code runs and interact with different subsystem depending on the user requests. It handles almost all the logic of commcarehq
  
+ **Pillow:-** it Takes changes to primary data(couchdDB) and updates secondary data sources(Postgresql,Elasticsearch).Pillow detects changes in couchdb with change_feed feature available in couchdb. it pushes the changes in kafka topics, from there some other pilow service read the changes and applies necessaries changes to postgresql or elasticsearch.
+
+**Celery:**- This machines runs the celery process. [Celery](http://www.celeryproject.org/) consumes from rabbitmq queue and process them. Anything which usually takes time like sending an email/sms would be run through celery systems.
+
+######Notes:-
+Django Webworker,Celery and Pillowtop has same codebase [commcarehq](https://github.com/dimagi/commcare-hq/). They just run different piece of code depending on which server they are running on.The Confiuration file for these and usage is [here](https://github.com/dimagi/commcare-hq/blob/master/localsettings.example.py).
+
  **Redis:-** Used for caching the frequent needed information to reduce round-trips and increase the response time. It is also used for locking and User sessions.
 
 **Formplayer:-** Formplayer is a Java service that allows us to use applications on the web instead of on a 
@@ -58,15 +67,11 @@ mobile device. Formplayer cache session instance in redis and stores session ins
 
 **RabbitMQ :**- it runs RabbitMQ which is an open source message broker software. It accepts messages from producers, and delivers them to consumers. It acts like a middleman which can be used to reduce loads and delivery times taken by web application servers.
 
-**Celery:**- This machines runs the celery process. [Celery](http://www.celeryproject.org/) consumes from rabbitmq queue and process them. Anything which usually takes time like sending an email/sms would be run through celery systems.
-
 **Postgresql :-** This is the Primary Database for commcarehq . All the forms,user,application etc info are stored in this DB. You can have different dbs for report,sync,warehouse stuff either in the same machine or in the different machines. you just have to provide the connection info in settings of django webworker.
 
 **CouchDB:-**  It's running couchdb which is a no sql databse and also our legacy Primary datasource. Mostly it contains user related info.
 
 **Kafka :-** Kafka is a distributed streaming platform that is used for  publish and subscribe to streams of records. kafka  replicates topic log partitions to multiple servers. Any Changes that happens on couchdb is feed to kafka topics systems from there it's consumed by the pillowtop servers.
-
-**Pillowtop:-** it Takes changes to primary data(couchdDB) and updates secondary data sources(Postgresql,Elasticsearch).Pillow detects changes in couchdb with change_feed feature available in couchdb. it pushes the changes in kafka topics, from there some other pilow service read the changes and applies necessaries changes to postgresql or elasticsearch.
 
 **Elasticsearch:-** It's our secondary analytics data. It's great for searching and querying. It's used for reports,Users,forms etc.
 
